@@ -7,6 +7,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,13 +37,25 @@ import com.google.common.base.Joiner;
 
 public class Skyoconfig {
 	
-	private static final char DEFAULT_SEPARATOR = '_';
-	private static final String LINE_SEPARATOR = System.lineSeparator();
-	private static final String TEMP_CONFIG_SECTION = "temp";
-	public static final String SKYOCONFIG_VERSION = "0.1";
+	private static final transient char DEFAULT_SEPARATOR = '_';
+	private static final transient String LINE_SEPARATOR = System.lineSeparator();
+	private static final transient String TEMP_CONFIG_SECTION = "temp";
 	
-	private File configFile;
-	private List<String> header;
+	private static final HashMap<Class<?>, Class<?>> primitivesClass = new HashMap<Class<?>, Class<?>>();{
+		primitivesClass.put(int.class, Integer.class);
+		primitivesClass.put(long.class, Integer.class);
+		primitivesClass.put(double.class, Integer.class);
+		primitivesClass.put(float.class, Integer.class);
+		primitivesClass.put(boolean.class, Integer.class);
+		primitivesClass.put(char.class, Integer.class);
+		primitivesClass.put(byte.class, Integer.class);
+		primitivesClass.put(void.class, Integer.class);
+		primitivesClass.put(short.class, Integer.class);
+	}
+	public static final transient String SKYOCONFIG_VERSION = "0.1";
+	
+	private transient File configFile;
+	private transient List<String> header;
 	
 	/**
 	 * Creates a new instance of Skyoconfig without header.
@@ -141,11 +155,12 @@ public class Skyoconfig {
 	 * @param name The <b>Field</b>'s name. Will be the path.
 	 * @param config The <b>YamlConfiguration</b>.
 	 * 
-	 * @throws IllegalAccessException If <b>Skyoconfig</b> does not have access to the <b>Field</b>.
-	 * @throws ParseException If the JSON parser fails to parse a <b>Location</b> or a <b>Vector</b>.
+	 * @throws IllegalAccessException If <b>Skyoconfig</b> does not have access to the <b>Field</b> or the <b>Method</b> <b>valueOf</b> of a <b>Primitive</b>.
+	 * @throws InvocationTargetException Invoked if the <b>Skyoconfig</b> fails to use <b>valueOf</b> for a <b>Primitive</b>.
+	 * @throws NoSuchMethodException Same as <b>InvocationTargetException</b>.
 	 */
 	
-	private final void loadField(final Field field, final String name, final YamlConfiguration config) throws IllegalAccessException, ParseException {
+	private final void loadField(final Field field, final String name, final YamlConfiguration config) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, ParseException {
 		final Object value = deserializeField(field, getFieldName(field), config);
 		if(value == null) {
 			saveField(field, name, config);
@@ -179,33 +194,36 @@ public class Skyoconfig {
 	 * @return The deserialied value of the field.
 	 * 
 	 * @throws ParseException If the JSON parser fails to parse a <b>Location</b> or a <b>Vector</b>.
+	 * @throws IllegalAccessException If <b>Skyoconfig</b> does not have access to the <b>Field</b> or the <b>Method</b> <b>valueOf</b> of a <b>Primitive</b>.
+	 * @throws InvocationTargetException Invoked if the <b>Skyoconfig</b> fails to use <b>valueOf</b> for a <b>Primitive</b>.
+	 * @throws NoSuchMethodException Same as <b>InvocationTargetException</b>.
 	 */
 	
 	@SuppressWarnings({"unchecked", "rawtypes"})
-	private final Object deserializeField(final Field field, final String path, final YamlConfiguration config) throws ParseException {
+	private final Object deserializeField(final Field field, final String path, final YamlConfiguration config) throws ParseException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		final Class<?> clazz = field.getType();
-		if(clazz.isAnnotation()) {
-			return null;
-		}
-		if(clazz.isEnum()) {
-			final Object enumValue = config.get(path);
-			if(enumValue != null) {
-				return Enum.valueOf((Class<? extends Enum>)clazz, enumValue.toString());
-			}
-			return null;
-		}
 		if(Map.class.isAssignableFrom(clazz)) {
 			return deserializeMap(config.getConfigurationSection(path));
 		}
+		final Object value = config.get(path);
+		if(value == null || Modifier.isTransient(field.getModifiers())) {
+			return null;
+		}
+		if(clazz.isPrimitive()) {
+			return primitivesClass.get(clazz).getMethod("valueOf", String.class).invoke(this, value.toString());
+		}
+		if(clazz.isEnum()) {
+			return Enum.valueOf((Class<? extends Enum>)clazz, value.toString());
+		}
 		if(List.class.isAssignableFrom(clazz)) {
-			return (List<?>)new Yaml().load(config.get(path).toString());
+			return (List<?>)new Yaml().load(value.toString());
 		}
 		if(Location.class.isAssignableFrom(clazz)) {
-			final JSONObject object = (JSONObject)new JSONParser().parse(config.getString(path));
+			final JSONObject object = (JSONObject)new JSONParser().parse(value.toString());
 			return new Location(Bukkit.getWorld(object.get("world").toString()), Double.parseDouble(object.get("x").toString()), Double.parseDouble(object.get("y").toString()), Double.parseDouble(object.get("z").toString()), Float.parseFloat(object.get("yaw").toString()), Float.parseFloat(object.get("pitch").toString()));
 		}
 		if(Vector.class.isAssignableFrom(clazz)) {
-			final JSONObject object = (JSONObject)new JSONParser().parse(config.getString(path));
+			final JSONObject object = (JSONObject)new JSONParser().parse(value.toString());
 			return new Vector(Double.parseDouble(object.get("x").toString()), Double.parseDouble(object.get("y").toString()), Double.parseDouble(object.get("z").toString()));
 		}
 		return config.get(path);
