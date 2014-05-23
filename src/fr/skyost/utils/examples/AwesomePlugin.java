@@ -20,7 +20,7 @@ public class AwesomePlugin extends JavaPlugin {
 			config.load();
 			logger.log(Level.INFO, "Voici le champ \"configurableString\" : \"" + config.configurableString + "\".");
 		}
-		catch(InvalidConfigurationException ex) {
+		catch(final InvalidConfigurationException ex) {
 			ex.printStackTrace();
 			logger.log(Level.SEVERE, "Oooops ! Something went wrong while loading the configuration !");
 			Bukkit.getPluginManager().disablePlugin(this);
@@ -32,7 +32,7 @@ public class AwesomePlugin extends JavaPlugin {
 		try {
 			config.save();
 		}
-		catch(InvalidConfigurationException ex) {
+		catch(final InvalidConfigurationException ex) {
 			ex.printStackTrace();
 			getLogger().log(Level.SEVERE, "Oooops ! Something went wrong while saving the configuration !");
 		}

@@ -30,6 +30,7 @@ import com.google.common.base.Joiner;
 /**
  * <h1>Skyoconfig</h1>
  * <p><i>Handle configurations with ease !</i></p>
+ * <p><b>Current version :</b> v0.2.
  * 
  * @author <b>Skyost</b> (<a href="http://www.skyost.eu">www.skyost.eu</a>).
  * <br>Inspired from <a href="https://forums.bukkit.org/threads/lib-supereasyconfig-v1-2-based-off-of-codename_bs-awesome-easyconfig-v2-1.100569/">SuperEasyConfig</a>.</br>
@@ -52,7 +53,6 @@ public class Skyoconfig {
 		primitivesClass.put(void.class, Integer.class);
 		primitivesClass.put(short.class, Integer.class);
 	}
-	public static final transient String SKYOCONFIG_VERSION = "0.1";
 	
 	private transient File configFile;
 	private transient List<String> header;
