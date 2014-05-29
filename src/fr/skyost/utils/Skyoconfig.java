@@ -9,6 +9,8 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +32,7 @@ import com.google.common.base.Joiner;
 /**
  * <h1>Skyoconfig</h1>
  * <p><i>Handle configurations with ease !</i></p>
- * <p><b>Current version :</b> v0.3.2.
+ * <p><b>Current version :</b> v0.3.4.
  * 
  * @author <b>Skyost</b> (<a href="http://www.skyost.eu">www.skyost.eu</a>).
  * <br>Inspired from <a href="https://forums.bukkit.org/threads/lib-supereasyconfig-v1-2-based-off-of-codename_bs-awesome-easyconfig-v2-1.100569/">SuperEasyConfig</a>.</br>
@@ -199,10 +201,18 @@ public class Skyoconfig {
 	private final Object deserializeField(final Field field, final String path, final YamlConfiguration config) throws ParseException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		final Class<?> clazz = field.getType();
 		if(Map.class.isAssignableFrom(clazz)) {
-			return deserializeMap(config.getConfigurationSection(path));
-		}
-		if(List.class.isAssignableFrom(clazz)) {
-			return deserializeList(config.getConfigurationSection(path));
+			final ConfigurationSection section = config.getConfigurationSection(path);
+			if(section == null) {
+				return null;
+			}
+			final Type[] types = ((ParameterizedType)field.getGenericType()).getActualTypeArguments();
+			final Class<?> keysClass = types[0].getClass();
+			final Class<?> valuesClass = types[1].getClass();
+			final Map<Object, Object> map = new HashMap<Object, Object>();
+			for(final String key : section.getKeys(false)) {
+				map.put(keysClass.isEnum() ? Enum.valueOf((Class<? extends Enum>)keysClass, key) : key, valuesClass.isEnum() ? Enum.valueOf((Class<? extends Enum>)valuesClass, section.get(key).toString()) : section.get(key));
+			}
+			return map;
 		}
 		final Object value = config.get(path);
 		if(value == null || Modifier.isTransient(field.getModifiers())) {
@@ -214,6 +224,14 @@ public class Skyoconfig {
 		if(clazz.isEnum()) {
 			return Enum.valueOf((Class<? extends Enum>)clazz, value.toString());
 		}
+		if(List.class.isAssignableFrom(clazz)) {
+			final Class<?> listClass = (Class<?>)((ParameterizedType)field.getGenericType()).getActualTypeArguments()[0];
+			final List<Object> result = new ArrayList<Object>();
+			for(final Object object : (List<?>)value) {
+				result.add(listClass.isEnum() ? Enum.valueOf((Class<? extends Enum>)listClass, object.toString()) : object.toString());
+			}
+			return result;
+		}
 		if(Location.class.isAssignableFrom(clazz)) {
 			final JSONObject object = (JSONObject)new JSONParser().parse(value.toString());
 			return new Location(Bukkit.getWorld(object.get("world").toString()), Double.parseDouble(object.get("x").toString()), Double.parseDouble(object.get("y").toString()), Double.parseDouble(object.get("z").toString()), Float.parseFloat(object.get("yaw").toString()), Float.parseFloat(object.get("pitch").toString()));
@@ -223,42 +241,6 @@ public class Skyoconfig {
 			return new Vector(Double.parseDouble(object.get("x").toString()), Double.parseDouble(object.get("y").toString()), Double.parseDouble(object.get("z").toString()));
 		}
 		return config.get(path);
-	}
-	
-	/**
-	 * Deserializes a <b>Map</b> from a <b>ConfigurationSection</b>.
-	 * 
-	 * @param section The specified <b>ConfigurationSection</b>.
-	 * 
-	 * @return The deserialied <b>Map</b>.
-	 */
-	
-	private final Map<?, ?> deserializeMap(final ConfigurationSection section) {
-		if(section == null) {
-			return null;
-		}
-		final Map<String, Object> map = new HashMap<String, Object>();
-		for(final String key : section.getKeys(false)) {
-			map.put(key, section.get(key));
-		}
-		return map;
-	}
-	
-	/**
-	 * Deserializes a <b>List</b> from a <b>ConfigurationSection</b>.
-	 * 
-	 * @param section The specified <b>ConfigurationSection</b>.
-	 * 
-	 * @return The deserialied <b>List</b>.
-	 */
-	
-	private final List<?> deserializeList(final ConfigurationSection section) {
-		if(section == null) {
-			return null;
-		}
-		final List<Object> list = new ArrayList<Object>();
-		list.addAll(section.getKeys(false));
-		return list;
 	}
 	
 	/**
@@ -280,10 +262,21 @@ public class Skyoconfig {
 			return null;
 		}
 		if(Map.class.isAssignableFrom(clazz)) {
-			return serializeMap(config, (Map<?, ?>)value);
+			final ConfigurationSection section = config.createSection(TEMP_CONFIG_SECTION);
+			for(final Entry<?, ?> entry : ((Map<?, ?>)value).entrySet()) {
+				final Object entryKey = entry.getKey();
+				final Object entryValue = entry.getValue();
+				section.set(entryKey.getClass().isEnum() ? ((Enum<?>)entryKey).name() : entryKey.toString(), entryValue.getClass().isEnum() ? ((Enum<?>)entryValue).name() : entryValue.toString());
+			}
+			config.set(TEMP_CONFIG_SECTION, null);
+			return section;
 		}
 		if(List.class.isAssignableFrom(clazz)) {
-			return serializeList(config, (List<?>)value);
+			final List<Object> result = new ArrayList<Object>();
+			for(final Object object : (List<?>)value) {
+				result.add(object.getClass().isEnum() ? ((Enum<?>)object).name() : object.toString());
+			}
+			return result;
 		}
 		if(Location.class.isAssignableFrom(clazz)) {
 			final Location location = (Location)value;
@@ -304,45 +297,6 @@ public class Skyoconfig {
 			return object.toJSONString();
 		}
 		return value.toString();
-	}
-	
-	/**
-	 * Serializes a <b>Map</b> to a <b>ConfigurationSection</b>.
-	 * 
-	 * @param config The <b>YamlConfiguration</b>.
-	 * @param map The specified <b>Map</b>.
-	 * 
-	 * @return The serialized <b>Map</b> contained into a <b>ConfigurationSection</b>.
-	 */
-	
-	private final ConfigurationSection serializeMap(final YamlConfiguration config, final Map<?, ?> map) {
-		final ConfigurationSection section = config.createSection(TEMP_CONFIG_SECTION);
-		for(final Entry<?, ?> entry : map.entrySet()) {
-			final Object key = entry.getKey();
-			final Object value = entry.getValue();
-			section.set(key.getClass().isEnum() ? ((Enum<?>)key).name() : key.toString(), value.getClass().isEnum() ? ((Enum<?>)value).name() : value.toString());
-		}
-		config.set(TEMP_CONFIG_SECTION, null);
-		return section;
-	}
-	
-	/**
-	 * Serializes a <b>List</b> to a <b>ConfigurationSection</b>.
-	 * 
-	 * @param config The <b>YamlConfiguration</b>.
-	 * @param list The specified <b>List</b>.
-	 * 
-	 * @return The serialized <b>List</b> contained into a <b>ConfigurationSection</b>.
-	 */
-	
-	private final ConfigurationSection serializeList(final YamlConfiguration config, final List<?> list) {
-		final ConfigurationSection section = config.createSection(TEMP_CONFIG_SECTION);
-		for(int i = 1; i < list.size(); i++) {
-			final Object value = list.get(i - 1);
-			section.set(String.valueOf(i), value.getClass().isEnum() ? ((Enum<?>)value).name() : value.toString());
-		}
-		config.set(TEMP_CONFIG_SECTION, null);
-		return section;
 	}
 	
 	/**
