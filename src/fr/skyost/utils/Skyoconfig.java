@@ -30,7 +30,7 @@ import com.google.common.base.Joiner;
 /**
  * <h1>Skyoconfig</h1>
  * <p><i>Handle configurations with ease !</i></p>
- * <p><b>Current version :</b> v0.3.1.
+ * <p><b>Current version :</b> v0.3.2.
  * 
  * @author <b>Skyost</b> (<a href="http://www.skyost.eu">www.skyost.eu</a>).
  * <br>Inspired from <a href="https://forums.bukkit.org/threads/lib-supereasyconfig-v1-2-based-off-of-codename_bs-awesome-easyconfig-v2-1.100569/">SuperEasyConfig</a>.</br>
@@ -318,7 +318,9 @@ public class Skyoconfig {
 	private final ConfigurationSection serializeMap(final YamlConfiguration config, final Map<?, ?> map) {
 		final ConfigurationSection section = config.createSection(TEMP_CONFIG_SECTION);
 		for(final Entry<?, ?> entry : map.entrySet()) {
-			section.set(entry.getKey().toString(), entry.getValue());
+			final Object key = entry.getKey();
+			final Object value = entry.getValue();
+			section.set(key.getClass().isEnum() ? ((Enum<?>)key).name() : key.toString(), value.getClass().isEnum() ? ((Enum<?>)value).name() : value.toString());
 		}
 		config.set(TEMP_CONFIG_SECTION, null);
 		return section;
@@ -336,7 +338,8 @@ public class Skyoconfig {
 	private final ConfigurationSection serializeList(final YamlConfiguration config, final List<?> list) {
 		final ConfigurationSection section = config.createSection(TEMP_CONFIG_SECTION);
 		for(int i = 1; i < list.size(); i++) {
-			section.set(String.valueOf(i), list.get(i - 1));
+			final Object value = list.get(i - 1);
+			section.set(String.valueOf(i), value.getClass().isEnum() ? ((Enum<?>)value).name() : value.toString());
 		}
 		config.set(TEMP_CONFIG_SECTION, null);
 		return section;
