@@ -18,7 +18,7 @@ public class AwesomePlugin extends JavaPlugin {
 		try {
 			config = new PluginConfig(new File(this.getDataFolder(), "config.yml"));
 			config.load();
-			logger.log(Level.INFO, "Voici le champ \"configurableString\" : \"" + config.configurableString + "\".");
+			logger.log(Level.INFO, "Here is the field \"configurableString\" : \"" + config.configurableString + "\".");
 		}
 		catch(final InvalidConfigurationException ex) {
 			ex.printStackTrace();
