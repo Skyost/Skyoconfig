@@ -32,7 +32,7 @@ import com.google.common.primitives.Primitives;
 /**
  * <h1>Skyoconfig</h1>
  * <p><i>Handle configurations with ease !</i></p>
- * <p><b>Current version :</b> v0.6.1.
+ * <p><b>Current version :</b> v0.6.2.
  * 
  * @author <b>Skyost</b> (<a href="http://www.skyost.eu">www.skyost.eu</a>).
  * <br>Inspired from <a href="https://forums.bukkit.org/threads/lib-supereasyconfig-v1-2-based-off-of-codename_bs-awesome-easyconfig-v2-1.100569/">SuperEasyConfig</a>.</br>
@@ -269,6 +269,7 @@ public class Skyoconfig {
 		if(object instanceof Location) {
 			final Location location = (Location)object;
 			final JSONObject jsonObject = new JSONObject();
+			jsonObject.put("world", location.getWorld().getName());
 			jsonObject.put("x", location.getX());
 			jsonObject.put("y", location.getY());
 			jsonObject.put("z", location.getZ());

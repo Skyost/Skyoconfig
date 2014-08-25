@@ -10,7 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class AwesomePlugin extends JavaPlugin {
 	
-	private PluginConfig config; //Can be static too !
+	private PluginConfig config; // Can be static too !
 	
 	@Override
 	public final void onEnable() {
