@@ -24,8 +24,10 @@ public class PluginConfig extends Skyoconfig {
 			put("key2", "value2");
 		}
 	};
-	
 	public String configurable_string_2 = "This one does not needs the annotation but the field's name looks so bad !";
+	public transient String ignoredString1 = "This String should be ignored.";
+	@ConfigOptions(ignore = true)
+	public String ignoredString2 = "This one too.";
 	
 	public PluginConfig(final File configFile) {
 		super(configFile, Arrays.asList("This is an header...", "...Which looks more than one line !"));
