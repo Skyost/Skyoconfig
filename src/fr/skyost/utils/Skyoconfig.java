@@ -32,7 +32,7 @@ import com.google.common.primitives.Primitives;
 /**
  * <h1>Skyoconfig</h1>
  * <p><i>Handle configurations with ease !</i></p>
- * <p><b>Current version :</b> v0.7.
+ * <p><b>Current version :</b> v0.8.
  * 
  * @author <b>Skyost</b> (<a href="http://www.skyost.eu">www.skyost.eu</a>).
  * <br>Inspired from <a href="https://forums.bukkit.org/threads/lib-supereasyconfig-v1-2-based-off-of-codename_bs-awesome-easyconfig-v2-1.100569/">SuperEasyConfig</a>.</br>
@@ -78,8 +78,12 @@ public class Skyoconfig {
 	public final void load() throws InvalidConfigurationException {
 		try {
 			final YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-			for(final Field field : getClass().getFields()) {
-				loadField(field, getFieldName(field), config);
+			Class<?> clazz = getClass();
+			while(clazz != Skyoconfig.class) {
+				for(final Field field : clazz.getFields()) {
+					loadField(field, getFieldName(field), config);
+				}
+				clazz = clazz.getSuperclass();
 			}
 			saveConfig(config);
 		}
@@ -97,8 +101,12 @@ public class Skyoconfig {
 	public final void save() throws InvalidConfigurationException {
 		try {
 			final YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-			for(final Field field : getClass().getFields()) {
-				saveField(field, getFieldName(field), config);
+			Class<?> clazz = getClass();
+			while(clazz != Skyoconfig.class) {
+				for(final Field field : clazz.getFields()) {
+					saveField(field, getFieldName(field), config);
+				}
+				clazz = clazz.getSuperclass();
 			}
 			saveConfig(config);
 		}
