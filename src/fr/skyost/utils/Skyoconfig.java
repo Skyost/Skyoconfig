@@ -32,7 +32,7 @@ import com.google.common.primitives.Primitives;
 /**
  * <h1>Skyoconfig</h1>
  * <p><i>Handle configurations with ease !</i></p>
- * <p><b>Current version :</b> v0.8.
+ * <p><b>Current version :</b> v0.8.1.
  * 
  * @author <b>Skyost</b> (<a href="http://www.skyost.eu">www.skyost.eu</a>).
  * <br>Inspired from <a href="https://forums.bukkit.org/threads/lib-supereasyconfig-v1-2-based-off-of-codename_bs-awesome-easyconfig-v2-1.100569/">SuperEasyConfig</a>.</br>
@@ -123,7 +123,7 @@ public class Skyoconfig {
 	 * @return The formatted <b>Field</b>'s name.
 	 */
 	
-	private final String getFieldName(final Field field) {
+	private String getFieldName(final Field field) {
 		final ConfigOptions options = field.getAnnotation(ConfigOptions.class);
 		if(options == null) {
 			return field.getName().replace(DEFAULT_SEPARATOR, '.');
@@ -144,12 +144,9 @@ public class Skyoconfig {
 	 * <br><b>false</b> Otherwise.
 	 */
 	
-	private final boolean ignoreField(final Field field) {
+	private boolean ignoreField(final Field field) {
 		final ConfigOptions options = field.getAnnotation(ConfigOptions.class);
-		if(options == null) {
-			return false;
-		}
-		return options.ignore();
+		return options != null && options.ignore();
 	}
 	
 	/**
@@ -160,7 +157,7 @@ public class Skyoconfig {
 	 * @throws IOException <b>InputOutputException</b>.
 	 */
 	
-	private final void saveConfig(final YamlConfiguration config) throws IOException {
+	private void saveConfig(final YamlConfiguration config) throws IOException {
 		if(header != null && header.size() > 0) {
 			config.options().header(Joiner.on(LINE_SEPARATOR).join(header));
 		}
@@ -181,7 +178,7 @@ public class Skyoconfig {
 	 * @throws InstantiationException When a <b>Map</b> cannot be created.
 	 */
 	
-	private final void loadField(final Field field, final String name, final YamlConfiguration config) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, ParseException, InstantiationException {
+	private void loadField(final Field field, final String name, final YamlConfiguration config) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, ParseException, InstantiationException {
 		if(Modifier.isTransient(field.getModifiers()) || ignoreField(field)) {
 			return;
 		}
@@ -204,7 +201,7 @@ public class Skyoconfig {
 	 * @throws IllegalAccessException If <b>Skyoconfig</b> does not have access to the <b>Field</b>.
 	 */
 	
-	private final void saveField(final Field field, final String name, final YamlConfiguration config) throws IllegalAccessException {
+	private void saveField(final Field field, final String name, final YamlConfiguration config) throws IllegalAccessException {
 		if(Modifier.isTransient(field.getModifiers()) || ignoreField(field)) {
 			return;
 		}
@@ -227,7 +224,7 @@ public class Skyoconfig {
 	 */
 	
 	@SuppressWarnings({"unchecked", "rawtypes"})
-	private final Object deserializeObject(final Class<?> clazz, final Object object) throws ParseException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
+	private Object deserializeObject(final Class<?> clazz, final Object object) throws ParseException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
 		if(clazz.isPrimitive()) {
 			return Primitives.wrap(clazz).getMethod("valueOf", String.class).invoke(this, object.toString());
 		}
@@ -239,17 +236,17 @@ public class Skyoconfig {
 		}
 		if(Map.class.isAssignableFrom(clazz) || object instanceof Map) {
 			final ConfigurationSection section = (ConfigurationSection)object;
-			final Map<Object, Object> deserializedMap = new HashMap<Object, Object>();
+			final Map<Object, Object> unserializedMap = new HashMap<>();
 			for(final String key : section.getKeys(false)) {
 				final Object value = section.get(key);
-				deserializedMap.put(key, deserializeObject(value.getClass(), value));
+				unserializedMap.put(key, deserializeObject(value.getClass(), value));
 			}
 			final Object map = clazz.newInstance();
-			clazz.getMethod("putAll", Map.class).invoke(map, deserializedMap);
+			clazz.getMethod("putAll", Map.class).invoke(map, unserializedMap);
 			return map;
 		}
 		if(List.class.isAssignableFrom(clazz) || object instanceof List) {
-			final List<Object> result = new ArrayList<Object>();
+			final List<Object> result = new ArrayList<>();
 			for(final Object value : (List<?>)object) {
 				result.add(deserializeObject(value.getClass(), value));
 			}
@@ -276,7 +273,7 @@ public class Skyoconfig {
 	 */
 	
 	@SuppressWarnings("unchecked")
-	private final Object serializeObject(final Object object, final YamlConfiguration config) {
+	private Object serializeObject(final Object object, final YamlConfiguration config) {
 		if(object instanceof String) {
 			return object.toString().replace(ChatColor.COLOR_CHAR, '&');
 		}
@@ -292,7 +289,7 @@ public class Skyoconfig {
 			return section;
 		}
 		if(object instanceof List) {
-			final List<Object> result = new ArrayList<Object>();
+			final List<Object> result = new ArrayList<>();
 			for(final Object value : (List<?>)object) {
 				result.add(serializeObject(value, config));
 			}
@@ -374,7 +371,7 @@ public class Skyoconfig {
 		 * @return The key's name.
 		 */
 		
-		public String name() default "";
+		String name() default "";
 		
 		/**
 		 * If Skyoconfig should ignore this field.
@@ -383,7 +380,7 @@ public class Skyoconfig {
 		 * <br><b>false</b> Otherwise.
 		 */
 		
-		public boolean ignore() default false;
+		boolean ignore() default false;
 		
 	}
 	
